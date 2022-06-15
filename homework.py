@@ -23,6 +23,7 @@ logger.addHandler(handler)
 
 
 class State(enum.Enum):
+    """Установки для repl"""
     INITIAL = 0
     RUNNING = 1
     STOPPED = 2
@@ -176,6 +177,7 @@ def main():
 
 
 def repl():
+    """Плавное завершение"""
     global state
     while True:
         command = input('Please, press "s" to stop')
@@ -186,5 +188,8 @@ def repl():
 
 
 if __name__ == '__main__':
+
+    repl_thread = threading.Thread(target=repl)
+    repl_thread.start()
 
     main()
