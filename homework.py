@@ -23,7 +23,8 @@ logger.addHandler(handler)
 
 
 class State(enum.Enum):
-    """Установки для repl"""
+    """Установки для repl."""
+
     INITIAL = 0
     RUNNING = 1
     STOPPED = 2
@@ -168,7 +169,7 @@ def main():
             else:
                 send_message(bot, curr_message)
                 prev_message = curr_message
-                time.sleep(RETRY_TIME)
+            time.sleep(RETRY_TIME)
 
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
@@ -177,7 +178,7 @@ def main():
 
 
 def repl():
-    """Плавное завершение"""
+    """Плавное завершение."""
     global state
     while True:
         command = input('Please, press "s" to stop')
