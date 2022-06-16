@@ -13,7 +13,6 @@ from exeptions import (
     IncorrectKeyError, SendMessageError
 )
 from http import HTTPStatus
-from typing import Union
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -44,7 +43,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-RETRY_TIME = 600
+RETRY_TIME = 10
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
@@ -94,7 +93,7 @@ def get_api_answer(current_timestamp: int) -> list:
                 f'Ошибка подключения к API: {status_code}')
 
 
-def check_response(response: dict) -> Union[list, None]:
+def check_response(response: dict) -> list:
     """Проверяет ответ API на корректность."""
     if not isinstance(response['homeworks'], list):
         raise TypeError(
@@ -103,7 +102,6 @@ def check_response(response: dict) -> Union[list, None]:
     try:
         homeworks = response['homeworks']
     except Exception as error:
-        homeworks = None
         raise IncorrectKeyError(
             f'Неккоректный ключ в ответе API, ошибка: {error}')
     return homeworks
