@@ -9,7 +9,10 @@ import threading
 
 from dotenv import load_dotenv
 from exeptions import (
-    APIConnectionError, UnknownStatusError, IncorrectKeyError)
+    APIConnectionError, UnknownStatusError,
+    IncorrectKeyError, SendMessageError
+)
+from http import HTTPStatus
 from typing import Union
 
 logger = logging.getLogger(__name__)
@@ -37,7 +40,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 load_dotenv()
 
-
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
@@ -58,35 +60,36 @@ def send_message(bot: telegram.Bot, message: str) -> None:
     """Отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logger.info(f'Бот отправил сообщение: {message}')
     except Exception as error:
-        logger.error(f'Бот не смог отправить сообщение, ошибка: {error}')
+        raise SendMessageError(
+            f'Бот не смог отправить сообщение, ошибка: {error}')
+    else:
+        logger.info(f'Бот отправил сообщение: {message}')
 
 
 def get_api_answer(current_timestamp: int) -> list:
     """Делает запрос к единственному эндпоинту API."""
     timestamp = current_timestamp or int(time.time())
-    params = {'from_date': timestamp}
+    request_params = {
+        'url': ENDPOINT,
+        'headers': HEADERS,
+        'params': {'from_date': timestamp}
+    }
     try:
-        response = requests.get(
-            ENDPOINT, headers=HEADERS, params=params)
-        logger.info(f'Запрос выполнен: {response.status_code}')
+        response = requests.get(**request_params)
+        status_code = response.status_code
+        logger.info(f'Запрос выполнен: {status_code}')
     except Exception as error:
         raise APIConnectionError(f'Ошибка подключения к API: {error}')
     else:
-        status_code = response.status_code
-        if status_code == 200:
+        if status_code == HTTPStatus.OK:
             return response.json()
-        elif status_code == 404:
-            logger.error('Сбой в работе программы: '
-                         'Эндпоинт https://practicum.yandex.ru'
-                         '/api/user_api/homework_statuses/ недоступен. '
-                         'Код ответа API: 404')
+        elif status_code == HTTPStatus.NOT_FOUND:
             raise APIConnectionError(
-                f'Ошибка подключения к API: {status_code}')
+                'Эндпоинт https://practicum.yandex.ru'
+                '/api/user_api/homework_statuses/ недоступен. '
+                'Код ответа API: 404')
         else:
-            logger.error(f'Сбой в работе программы: '
-                         f'Код ответа API: {status_code} ')
             raise APIConnectionError(
                 f'Ошибка подключения к API: {status_code}')
 
@@ -100,8 +103,6 @@ def check_response(response: dict) -> Union[list, None]:
     try:
         homeworks = response['homeworks']
     except Exception as error:
-        logger.error(f'Нет ключа "homeworks" в ответе API '
-                     f'Ошибка: {error}.')
         homeworks = None
         raise IncorrectKeyError(
             f'Неккоректный ключ в ответе API, ошибка: {error}')
@@ -115,7 +116,6 @@ def parse_status(homework: dict) -> str:
     try:
         verdict = HOMEWORK_STATUSES[homework_status]
     except Exception as error:
-        print(error)
         verdict = 'Статус домашней работы неизвестен.'
         raise UnknownStatusError(
             f'Неизвестный статус домашней работы, ошибка: {error}')
@@ -169,11 +169,10 @@ def main():
             else:
                 send_message(bot, curr_message)
                 prev_message = curr_message
-            time.sleep(RETRY_TIME)
-
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(message)
+        finally:
             time.sleep(RETRY_TIME)
 
 

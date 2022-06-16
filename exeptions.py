@@ -8,3 +8,7 @@ class UnknownStatusError(Exception):
 
 class IncorrectKeyError(Exception):
     pass
+
+
+class SendMessageError(Exception):
+    pass
